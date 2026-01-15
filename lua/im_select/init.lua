@@ -81,13 +81,4 @@ M.setup = function(opts)
     initialized = true
 end
 
-M.enable = function()
-    M.setup()
-end
-
-M.disable = function()
-    vim.api.nvim_clear_autocmds({ group = "im_select" })
-    initialized = false
-end
-
 return M
