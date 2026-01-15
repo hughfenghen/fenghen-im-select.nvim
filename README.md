@@ -1,6 +1,14 @@
 # fenghen-im-select.nvim
 
-基于 vim-im-select 逻辑完整翻译的 Neovim 输入法自动切换插件。
+> 源码翻译自 [vim-im-select](https://github.com/brglng/vim-im-select)  
+> 只添加一个功能：切换插入模式时，检测光标左侧字符是否是中文：
+> - 如果是，自动切换到中文输入法（vim.g.im_select_native_im）
+> - 否则切换到默认输入法（vim.g.im_select_default_im）
+
+**动机**：
+- 想扩展 im-select 实现智能判断，成功了，但缺少了很多事件自动切换；
+- 想扩展 vim-im-select 实现智能判断，但 vimscript 语法 AI 总是实现错误
+- 所以使用lua语言翻译 vim-im-select，再扩展实现智能判断
 
 ## 特性
 
@@ -18,11 +26,31 @@
 
 ```lua
 return {
-  dir = "/Users/fenghen/my-space/fenghen-im-select.nvim",
+  "hughfenghen/fenghen-im-select.nvim",
   config = function()
-    require("im_select.init").setup({
-      -- 配置选项
-    })
+    -- macOS 配置
+    if vim.fn.has "mac" == 1 then
+      vim.g.im_select_get_im_cmd = { "macism" }
+      vim.g.ImSelectSetImCmd = function(key)
+        local cmd = { "macism", key }
+        return cmd
+      end
+
+      vim.g.im_select_default = "com.apple.keylayout.ABC"
+      -- 本地输入法, 这里配置的是微信输入法
+      vim.g.im_select_native_im = "com.tencent.inputmethod.wetype.pinyin"
+    elseif vim.fn.has "win32" == 1 then
+      vim.g.im_select_get_im_cmd = { "im-select.exe" }
+      vim.g.im_select_default = "1033"
+      -- windows 系统没试过
+    end
+
+    vim.g.im_select_switch_timeout = 100
+    vim.g.im_select_enable_focus_events = 1
+    vim.g.im_select_enable_cmd_line = 1
+
+    local im_select = require "im_select.init"
+    im_select.setup()
   end,
 }
 ```
@@ -156,7 +184,7 @@ vim.g.im_select_enable_cmd_line = 1
 
 | 事件 | 触发条件 | 行为 |
 |------|---------|------|
-| InsertEnter | 进入插入模式 | 恢复之前的输入法 |
+| InsertEnter | 进入插入模式 | 根据光标左侧字符判断 |
 | CmdLineEnter | 进入命令行模式 | 恢复之前的输入法 |
 | TermEnter | 进入终端模式 | 恢复之前的输入法 |
 | InsertLeave | 离开插入模式 | 保存当前输入法，切换到默认 |
@@ -206,7 +234,7 @@ end
 
 ## 参考
 
-- [vim-im-select](https://github.com/daipeihust/im-select.nvim) - 原始 Vim script 实现
+- [vim-im-select](https://github.com/brglng/vim-im-select) - 原始 Vim script 实现
 - [im-select.nvim](https://github.com/keaising/im-select.nvim) - 早期的 Neovim Lua 实现
 
 ## License
