@@ -9,57 +9,49 @@ local function is_insert_or_cmdline_mode()
 	return mode:match("^[ciRsSt]$")
 end
 
-local function is_chinese_before_cursor()
-	-- 1. 获取光标位置 (1-based)
+-- 值定义：
+-- 0：其他字符
+-- 1：空格（半角空格 0x0020 或全角空格 0x3000）
+-- 2：中文（基本汉字、中文标点、全角字符）
+local function get_char_type_before_cursor()
 	local col = vim.fn.col(".")
-	-- 如果在行首，左边肯定没字符
 	if col == 1 then
-		return false
+		return 0
 	end
 
-	-- 2. 计算截取范围
-	-- 我们只需要查看光标左侧的最多 4 个字节 (UTF-8 最大宽度)
-	-- API 使用 0-based 索引
 	local row = vim.fn.line(".") - 1
 	local current_byte_idx = col - 1
-	-- 起始位置：当前位置减4，但不小于0
 	local start_col = math.max(0, current_byte_idx - 4)
 
-	-- 3. 获取这一小段文本
-	-- nvim_buf_get_text(buffer, start_row, start_col, end_row, end_col, opts)
-	-- 结果是一个 table (lines)，我们取第一行
 	local ok, text_lines = pcall(vim.api.nvim_buf_get_text, 0, row, start_col, row, current_byte_idx, {})
 
-	-- 容错处理：如果获取失败或为空
 	if not ok or #text_lines == 0 then
-		return false
+		return 0
 	end
 	local text_fragment = text_lines[1]
 
-	-- 4. 从这个片段中提取最后一个字符
-	-- 即使片段开头截断了其他字符（比如乱码），'.$' 也能正确匹配到末尾那个完整的字符
 	local char = vim.fn.matchstr(text_fragment, ".$")
 	if char == "" then
-		return false
+		return 0
 	end
 
-	-- 5. 判断 Unicode 范围
 	local nr = vim.fn.char2nr(char)
 
-	-- 基本汉字 (0x4E00 - 0x9FFF)
-	if nr >= 0x4E00 and nr <= 0x9FFF then
-		return true
-	end
-	-- 中文标点 (0x3000 - 0x303F)
-	if nr >= 0x3000 and nr <= 0x303F then
-		return true
-	end
-	-- 全角字符 (0xFF00 - 0xFFEF)
-	if nr >= 0xFF00 and nr <= 0xFFEF then
-		return true
+	if nr == 0x0020 or nr == 0x3000 then
+		return 1
 	end
 
-	return false
+	if nr >= 0x4E00 and nr <= 0x9FFF then
+		return 2
+	end
+	if nr >= 0x3000 and nr <= 0x303F then
+		return 2
+	end
+	if nr >= 0xFF00 and nr <= 0xFFEF then
+		return 2
+	end
+
+	return 0
 end
 
 -- 等同于 InsertEnter
@@ -69,8 +61,18 @@ M.on_insert_enter = function()
 	end
 
 	local cfg = im.get_config() or config.get_config()
+	local char_type = get_char_type_before_cursor()
 
-	if is_chinese_before_cursor() then
+	if char_type == 1 then
+		if vim.g.im_select_prev_im and vim.g.im_select_prev_im ~= "" then
+			im.set_im(vim.g.im_select_prev_im)
+			return
+		elseif cfg.ImSelectGetImCallback then
+			im.get_and_set_prev_im(cfg.ImSelectGetImCallback)
+		end
+	end
+
+	if char_type == 2 then
 		im.set_im(vim.g.im_select_native_im)
 		return
 	else
@@ -82,6 +84,8 @@ M.on_insert_enter = function()
 		im.set_im(vim.g.im_select_prev_im)
 	elseif cfg.ImSelectGetImCallback then
 		im.get_and_set_prev_im(cfg.ImSelectGetImCallback)
+	else
+		im.set_im(vim.g.im_select_default)
 	end
 end
 
