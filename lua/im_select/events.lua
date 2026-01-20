@@ -66,10 +66,10 @@ M.on_insert_enter = function()
 	if char_type == 1 then
 		if vim.g.im_select_prev_im and vim.g.im_select_prev_im ~= "" then
 			im.set_im(vim.g.im_select_prev_im)
-			return
 		elseif cfg.ImSelectGetImCallback then
 			im.get_and_set_prev_im(cfg.ImSelectGetImCallback)
 		end
+		return
 	end
 
 	if char_type == 2 then
