@@ -1,11 +1,13 @@
 local config = require("im_select.config")
 local events = require("im_select.events")
 local im = require("im_select.im")
+local state = require("im_select.state")
 
 local M = {}
 
 local initialized = false
 
+---@param opts? im_select.Config
 M.setup = function(opts)
     if initialized then
         return
@@ -72,6 +74,10 @@ M.setup = function(opts)
     })
 
     initialized = true
+end
+
+M.get_prev_im = function()
+    return state.get_prev_im()
 end
 
 return M

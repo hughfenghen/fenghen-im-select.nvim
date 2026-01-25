@@ -1,5 +1,18 @@
 local M = {}
 
+---@class im_select.Config
+---@field im_select_command? string
+---@field im_select_default? string
+---@field im_select_native_im? string
+---@field im_select_get_im_cmd? string[]
+---@field ImSelectSetImCmd? fun(key: string): string[]
+---@field ImSelectGetImCallback? fun(status: integer, stdout: string, stderr: string): string
+---@field im_select_switch_timeout? integer
+---@field im_select_enable_focus_events? 0|1
+---@field im_select_enable_cmd_line? 0|1
+---@field im_select_enable_for_gvim? 0|1
+---@field insert_enter_strategies? im_select.Strategy[]
+
 -- 平台检测
 local function determine_os()
 	if vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1 then
@@ -40,6 +53,7 @@ local function is_gui()
 end
 
 -- 默认配置
+---@type im_select.Config
 local default_config = {
 	im_select_command = nil,
 	im_select_default = nil,
@@ -51,9 +65,12 @@ local default_config = {
 	im_select_enable_focus_events = 1,
 	im_select_enable_cmd_line = 1,
 	im_select_enable_for_gvim = 0,
+	insert_enter_strategies = nil,
 }
 
 -- 获取用户配置
+---@param opts? im_select.Config
+---@return im_select.Config
 M.get_config = function(opts)
 	local config = vim.deepcopy(default_config)
 
@@ -94,6 +111,9 @@ M.get_config = function(opts)
 	end
 	if config.im_select_enable_for_gvim == nil and vim.g.im_select_enable_for_gvim ~= nil then
 		config.im_select_enable_for_gvim = vim.g.im_select_enable_for_gvim
+	end
+	if config.insert_enter_strategies == nil and vim.g.insert_enter_strategies ~= nil then
+		config.insert_enter_strategies = vim.g.insert_enter_strategies
 	end
 
 	return config

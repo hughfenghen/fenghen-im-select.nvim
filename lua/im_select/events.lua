@@ -4,54 +4,88 @@ local config = require("im_select.config")
 
 local M = {}
 
+---@class im_select.StrategyContext
+---@field char_before string|nil
+---@field charcode_before number|nil
+---@field char_after string|nil
+---@field charcode_after number|nil
+---@field filetype string
+---@field line_content string
+---@field config im_select.Config
+---@alias im_select.Strategy fun(ctx: im_select.StrategyContext): string|nil
+
 local function is_insert_or_cmdline_mode()
 	local mode = vim.fn.mode()
 	return mode:match("^[ciRsSt]$")
 end
 
--- 值定义：
--- 0：其他字符
--- 1：空格（半角空格 0x0020 或全角空格 0x3000）
--- 2：中文（基本汉字、中文标点、全角字符）
-local function get_char_type_before_cursor()
-	local col = vim.fn.col(".")
-	if col == 1 then
-		return 0
-	end
-
+local function get_context_before_cursor()
 	local row = vim.fn.line(".") - 1
-	local current_byte_idx = col - 1
-	local start_col = math.max(0, current_byte_idx - 4)
+	local col = vim.fn.col(".") - 1
 
-	local ok, text_lines = pcall(vim.api.nvim_buf_get_text, 0, row, start_col, row, current_byte_idx, {})
+	local char_before = nil
+	local charcode_before = nil
+	local char_after = nil
+	local charcode_after = nil
 
-	if not ok or #text_lines == 0 then
-		return 0
-	end
-	local text_fragment = text_lines[1]
-
-	local char = vim.fn.matchstr(text_fragment, ".$")
-	if char == "" then
-		return 0
-	end
-
-	local nr = vim.fn.char2nr(char)
-
-	if nr == 0x0020 or nr == 0x3000 then
-		return 1
+	if col > 0 then
+		local start_col = math.max(0, col - 4)
+		local ok, text_lines = pcall(vim.api.nvim_buf_get_text, 0, row, start_col, row, col, {})
+		if ok and #text_lines > 0 then
+			char_before = vim.fn.matchstr(text_lines[1], ".$")
+			charcode_before = vim.fn.char2nr(char_before)
+		end
 	end
 
-	if nr >= 0x4E00 and nr <= 0x9FFF then
-		return 2
-	end
-	if nr >= 0x3000 and nr <= 0x303F then
-		return 2
-	end
-	if nr >= 0xFF00 and nr <= 0xFFEF then
-		return 2
+	local line_len = vim.fn.col("$") - 1
+	if col < line_len then
+		local end_col = math.min(line_len, col + 4)
+		local ok, text_lines = pcall(vim.api.nvim_buf_get_text, 0, row, col, row, end_col, {})
+		if ok and #text_lines > 0 then
+			char_after = vim.fn.matchstr(text_lines[1], "^.")
+			charcode_after = vim.fn.char2nr(char_after)
+		end
 	end
 
-	return 0
+	local line_content = vim.fn.getline(".")
+	if #line_content > 1000 then
+		line_content = line_content:sub(1, 1000)
+	end
+
+	return {
+		char_before = char_before,
+		charcode_before = charcode_before,
+		char_after = char_after,
+		charcode_after = charcode_after,
+		filetype = vim.bo.filetype,
+		line_content = line_content,
+	}
+end
+
+local function execute_strategies(strategies, cfg)
+	local context = get_context_before_cursor()
+	context.config = cfg
+	for _, strategy in ipairs(strategies) do
+		if type(strategy) == "function" then
+			local result = strategy(context)
+			if result ~= nil then
+				return result
+			end
+		end
+	end
+	return nil
+end
+
+M.strategy_default = function(context)
+	---@cast context im_select.StrategyContext
+	if state.get_prev_im() and state.get_prev_im() ~= "" then
+		return state.get_prev_im()
+	elseif context.config.ImSelectGetImCallback then
+		im.get_and_set_prev_im(context.config.ImSelectGetImCallback)
+		return state.get_prev_im()
+	else
+		return context.config.im_select_default
+	end
 end
 
 -- 等同于 InsertEnter
@@ -61,35 +95,12 @@ M.on_insert_enter = function()
 	end
 
 	local cfg = im.get_config() or config.get_config()
-	local char_type = get_char_type_before_cursor()
+	local strategies = cfg.insert_enter_strategies or { M.strategy_default }
 
-	if char_type == 1 then
-		if state.get_prev_im() and state.get_prev_im() ~= "" then
-			im.set_im(state.get_prev_im())
-		elseif cfg.ImSelectGetImCallback then
-			im.get_and_set_prev_im(cfg.ImSelectGetImCallback)
-		end
-		return
-	end
+	local result_im = execute_strategies(strategies, cfg)
 
-	if char_type == 2 then
-		if cfg.im_select_native_im then
-			im.set_im(cfg.im_select_native_im)
-		else
-			im.set_im(cfg.im_select_default)
-		end
-		return
-	else
-		im.set_im(cfg.im_select_default)
-		return
-	end
-
-	if state.get_prev_im() and state.get_prev_im() ~= "" then
-		im.set_im(state.get_prev_im())
-	elseif cfg.ImSelectGetImCallback then
-		im.get_and_set_prev_im(cfg.ImSelectGetImCallback)
-	else
-		im.set_im(cfg.im_select_default)
+	if result_im then
+		im.set_im(result_im)
 	end
 end
 

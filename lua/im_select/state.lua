@@ -7,13 +7,15 @@ local prev_im = nil
 local function detect_gui()
     if vim.fn.exists("g:GuiLoaded") == 1 and vim.g.GuiLoaded ~= 0 then
         gui = true
-    elseif pcall(function()
-        local uis = vim.api.nvim_list_uis()
-        if #uis > 0 then
-            local ext_termcolors = uis[1].ext_termcolors
-            gui = ext_termcolors == nil or ext_termcolors == 0
-        end
-    end) then
+    elseif
+        pcall(function()
+            local uis = vim.api.nvim_list_uis()
+            if #uis > 0 then
+                local ext_termcolors = uis[1].ext_termcolors
+                gui = ext_termcolors == nil or ext_termcolors == 0
+            end
+        end)
+    then
     elseif vim.fn.exists("+termguicolors") == 1 and vim.o.termguicolors then
         gui = true
     end
