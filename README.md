@@ -28,77 +28,80 @@
 return {
   "hughfenghen/fenghen-im-select.nvim",
   config = function()
+    local im_select = require "im_select.init"
+
+    ---@type im_select.Config
     local opts = {}
+
+    local im_select_native_im = nil
+    local im_select_default = nil
 
     -- macOS 配置
     if vim.fn.has "mac" == 1 then
       opts.im_select_get_im_cmd = { "macism" }
       opts.ImSelectSetImCmd = function(key)
-        return { "macism", key }
+        local cmd = { "macism", key }
+        return cmd
       end
 
-      opts.im_select_default = "com.apple.keylayout.ABC"
-      -- 本地输入法, 这里配置的是微信输入法
-      opts.im_select_native_im = "com.tencent.inputmethod.wetype.pinyin"
+      im_select_native_im = "com.tencent.inputmethod.wetype.pinyin"
+      im_select_default = "com.apple.keylayout.ABC"
+      opts.im_select_default = im_select_default
+      opts.im_select_native_im = im_select_native_im
     elseif vim.fn.has "win32" == 1 then
       opts.im_select_get_im_cmd = { "im-select.exe" }
-      opts.im_select_default = "1033"
+
+      im_select_default = "1033"
+      opts.im_select_default = im_select_default
     end
+
+    -- 以下自定义光标策略，请根据实际情况修改
+    -- 光标插入时的切换策略
+    opts.insert_enter_strategies = {
+      -- 如果光标前是中文字符，切换到拼音输入法
+      function(ctx)
+        local nr = ctx.charcode_before or ctx.charcode_after or 0
+        if nr >= 0x4E00 and nr <= 0x9FFF or nr >= 0x3000 and nr <= 0x303F or nr >= 0xFF00 and nr <= 0xFFEF then
+          return im_select_native_im
+        end
+      end,
+      -- 如果光标前是英文字母，切换英文输入法
+      function(ctx)
+        local nr = ctx.charcode_before or ctx.charcode_after or 0
+        if nr >= 0x41 and nr <= 0x5A or nr >= 0x61 and nr <= 0x7A then return im_select_default end
+      end,
+
+      -- 如果光标前是空格，切换到上次使用的输入法
+      function(ctx)
+        local nr = ctx.charcode_before or 0
+        if nr == 0x0020 or nr == 0x3000 then return im_select.get_prev_im() end
+      end,
+
+      -- Markdown 兜底切换至中文
+      function(ctx)
+        if ctx.filetype == "markdown" then return im_select_native_im end
+      end,
+      -- 兜底切换至英文
+      function() return im_select_default end,
+    }
 
     opts.im_select_switch_timeout = 100
     opts.im_select_enable_focus_events = 1
     opts.im_select_enable_cmd_line = 1
 
-    require("im_select.init").setup(opts)
+    im_select.setup(opts)
   end,
 }
 ```
 
 ## 配置
 
-### setup() 选项
-
-推荐通过 `setup()` 函数传递所有配置选项：
-
-```lua
-require("im_select.init").setup({
-  -- 获取输入法命令，默认自动检测
-  im_select_get_im_cmd = nil,
-
-  -- 设置输入法命令（函数类型），默认自动检测
-  ImSelectSetImCmd = nil,
-
-  -- 默认输入法标识符，默认自动检测
-  im_select_default = nil,
-
-  -- 本地输入法标识符，用于光标左侧是中文时切换，可选
-  im_select_native_im = nil,
-
-  -- 解析输出回调函数，默认自动检测
-  ImSelectGetImCallback = nil,
-
-  -- 焦点事件防抖超时（毫秒），默认 50
-  im_select_switch_timeout = 50,
-
-  -- 是否启用焦点事件，默认 1（启用）
-  im_select_enable_focus_events = 1,
-
-  -- 是否启用命令行模式，默认 1（启用）
-  im_select_enable_cmd_line = 1,
-
-  -- 是否在 GVim 中启用，默认 0（禁用）
-  im_select_enable_for_gvim = 0,
-})
-```
-
-### 平台默认值
-
 #### macOS
 
 ```lua
 -- 自动检测
-im_select_get_im_cmd = { "im-select" }
-ImSelectSetImCmd = function(key) return { "im-select", key } end
+im_select_get_im_cmd = { "macism" }
+ImSelectSetImCmd = function(key) return { "macism", key } end
 im_select_default = "com.apple.keylayout.ABC"
 ```
 
