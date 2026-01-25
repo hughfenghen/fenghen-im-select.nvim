@@ -64,8 +64,8 @@ M.on_insert_enter = function()
 	local char_type = get_char_type_before_cursor()
 
 	if char_type == 1 then
-		if vim.g.im_select_prev_im and vim.g.im_select_prev_im ~= "" then
-			im.set_im(vim.g.im_select_prev_im)
+		if state.get_prev_im() and state.get_prev_im() ~= "" then
+			im.set_im(state.get_prev_im())
 		elseif cfg.ImSelectGetImCallback then
 			im.get_and_set_prev_im(cfg.ImSelectGetImCallback)
 		end
@@ -73,19 +73,23 @@ M.on_insert_enter = function()
 	end
 
 	if char_type == 2 then
-		im.set_im(vim.g.im_select_native_im)
+		if cfg.im_select_native_im then
+			im.set_im(cfg.im_select_native_im)
+		else
+			im.set_im(cfg.im_select_default)
+		end
 		return
 	else
-		im.set_im(vim.g.im_select_default)
+		im.set_im(cfg.im_select_default)
 		return
 	end
 
-	if vim.g.im_select_prev_im and vim.g.im_select_prev_im ~= "" then
-		im.set_im(vim.g.im_select_prev_im)
+	if state.get_prev_im() and state.get_prev_im() ~= "" then
+		im.set_im(state.get_prev_im())
 	elseif cfg.ImSelectGetImCallback then
 		im.get_and_set_prev_im(cfg.ImSelectGetImCallback)
 	else
-		im.set_im(vim.g.im_select_default)
+		im.set_im(cfg.im_select_default)
 	end
 end
 
@@ -127,8 +131,8 @@ M.on_focus_lost = function()
 	end
 
 	if not is_insert_or_cmdline_mode() then
-		if vim.g.im_select_prev_im and vim.g.im_select_prev_im ~= "" then
-			im.set_im(vim.g.im_select_prev_im)
+		if state.get_prev_im() and state.get_prev_im() ~= "" then
+			im.set_im(state.get_prev_im())
 		else
 			local cfg = im.get_config() or config.get_config()
 			if cfg.ImSelectGetImCallback then
@@ -149,8 +153,8 @@ M.on_vim_leave_pre = function()
 		return
 	end
 
-	if vim.g.im_select_prev_im and vim.g.im_select_prev_im ~= "" then
-		local set_cmd = cfg.ImSelectSetImCmd(vim.g.im_select_prev_im)
+	if state.get_prev_im() and state.get_prev_im() ~= "" then
+		local set_cmd = cfg.ImSelectSetImCmd(state.get_prev_im())
 		local cmd = table.concat(set_cmd, " ")
 		vim.fn.system("silent !" .. cmd)
 	end

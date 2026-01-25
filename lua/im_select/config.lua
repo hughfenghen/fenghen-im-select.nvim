@@ -54,38 +54,45 @@ local default_config = {
 }
 
 -- 获取用户配置
-M.get_config = function()
+M.get_config = function(opts)
 	local config = vim.deepcopy(default_config)
 
-	-- 从 vim.g 获取用户配置
-	if vim.g.im_select_command then
+	-- 从 opts 获取用户配置（优先）
+	if opts then
+		for k, v in pairs(opts) do
+			config[k] = v
+		end
+	end
+
+	-- 从 vim.g 获取用户配置（向后兼容）
+	if not config.im_select_command and vim.g.im_select_command then
 		config.im_select_command = vim.g.im_select_command
 	end
-	if vim.g.im_select_default then
+	if not config.im_select_default and vim.g.im_select_default then
 		config.im_select_default = vim.g.im_select_default
 	end
-	if vim.g.im_select_native_im then
+	if not config.im_select_native_im and vim.g.im_select_native_im then
 		config.im_select_native_im = vim.g.im_select_native_im
 	end
-	if vim.g.im_select_get_im_cmd then
+	if not config.im_select_get_im_cmd and vim.g.im_select_get_im_cmd then
 		config.im_select_get_im_cmd = vim.g.im_select_get_im_cmd
 	end
-	if vim.g.ImSelectSetImCmd then
+	if not config.ImSelectSetImCmd and vim.g.ImSelectSetImCmd then
 		config.ImSelectSetImCmd = vim.g.ImSelectSetImCmd
 	end
-	if vim.g.ImSelectGetImCallback then
+	if not config.ImSelectGetImCallback and vim.g.ImSelectGetImCallback then
 		config.ImSelectGetImCallback = vim.g.ImSelectGetImCallback
 	end
-	if vim.g.im_select_switch_timeout then
+	if not config.im_select_switch_timeout and vim.g.im_select_switch_timeout then
 		config.im_select_switch_timeout = vim.g.im_select_switch_timeout
 	end
-	if vim.g.im_select_enable_focus_events then
+	if not config.im_select_enable_focus_events and vim.g.im_select_enable_focus_events then
 		config.im_select_enable_focus_events = vim.g.im_select_enable_focus_events
 	end
-	if vim.g.im_select_enable_cmd_line ~= nil then
+	if config.im_select_enable_cmd_line == nil and vim.g.im_select_enable_cmd_line ~= nil then
 		config.im_select_enable_cmd_line = vim.g.im_select_enable_cmd_line
 	end
-	if vim.g.im_select_enable_for_gvim ~= nil then
+	if config.im_select_enable_for_gvim == nil and vim.g.im_select_enable_for_gvim ~= nil then
 		config.im_select_enable_for_gvim = vim.g.im_select_enable_for_gvim
 	end
 

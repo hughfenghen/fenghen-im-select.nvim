@@ -28,29 +28,28 @@
 return {
   "hughfenghen/fenghen-im-select.nvim",
   config = function()
+    local opts = {}
+
     -- macOS 配置
     if vim.fn.has "mac" == 1 then
-      vim.g.im_select_get_im_cmd = { "macism" }
-      vim.g.ImSelectSetImCmd = function(key)
-        local cmd = { "macism", key }
-        return cmd
+      opts.im_select_get_im_cmd = { "macism" }
+      opts.ImSelectSetImCmd = function(key)
+        return { "macism", key }
       end
 
-      vim.g.im_select_default = "com.apple.keylayout.ABC"
+      opts.im_select_default = "com.apple.keylayout.ABC"
       -- 本地输入法, 这里配置的是微信输入法
-      vim.g.im_select_native_im = "com.tencent.inputmethod.wetype.pinyin"
+      opts.im_select_native_im = "com.tencent.inputmethod.wetype.pinyin"
     elseif vim.fn.has "win32" == 1 then
-      vim.g.im_select_get_im_cmd = { "im-select.exe" }
-      vim.g.im_select_default = "1033"
-      -- windows 系统没试过
+      opts.im_select_get_im_cmd = { "im-select.exe" }
+      opts.im_select_default = "1033"
     end
 
-    vim.g.im_select_switch_timeout = 100
-    vim.g.im_select_enable_focus_events = 1
-    vim.g.im_select_enable_cmd_line = 1
+    opts.im_select_switch_timeout = 100
+    opts.im_select_enable_focus_events = 1
+    opts.im_select_enable_cmd_line = 1
 
-    local im_select = require "im_select.init"
-    im_select.setup()
+    require("im_select.init").setup(opts)
   end,
 }
 ```
@@ -58,6 +57,8 @@ return {
 ## 配置
 
 ### setup() 选项
+
+推荐通过 `setup()` 函数传递所有配置选项：
 
 ```lua
 require("im_select.init").setup({
@@ -69,6 +70,9 @@ require("im_select.init").setup({
 
   -- 默认输入法标识符，默认自动检测
   im_select_default = nil,
+
+  -- 本地输入法标识符，用于光标左侧是中文时切换，可选
+  im_select_native_im = nil,
 
   -- 解析输出回调函数，默认自动检测
   ImSelectGetImCallback = nil,
@@ -172,11 +176,16 @@ im_select_default = "0"
 
 ### 使用 vim.g 配置（兼容 vim-im-select）
 
+插件仍然支持使用 `vim.g` 全局变量进行配置，但不推荐这种方式：
+
 ```lua
 vim.g.im_select_default = "com.apple.keylayout.ABC"
+vim.g.im_select_native_im = "com.tencent.inputmethod.wetype.pinyin"
 vim.g.im_select_enable_focus_events = 1
 vim.g.im_select_enable_cmd_line = 1
 ```
+
+**注意**：`setup()` 参数的优先级高于 `vim.g` 全局变量。如果同时配置了两者，将使用 `setup()` 参数的值。
 
 ## 工作原理
 

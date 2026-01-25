@@ -2,6 +2,7 @@ local M = {}
 
 local focus_event_enabled = 1
 local gui = false
+local prev_im = nil
 
 local function detect_gui()
     if vim.fn.exists("g:GuiLoaded") == 1 and vim.g.GuiLoaded ~= 0 then
@@ -34,6 +35,14 @@ end
 
 M.is_gui = function()
     return gui
+end
+
+M.get_prev_im = function()
+    return prev_im
+end
+
+M.set_prev_im = function(value)
+    prev_im = value
 end
 
 return M

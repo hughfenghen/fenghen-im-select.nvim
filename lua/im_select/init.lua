@@ -11,13 +11,7 @@ M.setup = function(opts)
         return
     end
 
-    local cfg = config.get_config()
-
-    if opts then
-        for k, v in pairs(opts) do
-            cfg[k] = v
-        end
-    end
+    local cfg = config.get_config(opts)
 
     cfg = config.set_platform_defaults(cfg)
 
@@ -26,7 +20,6 @@ M.setup = function(opts)
     end
 
     im.set_config(cfg)
-    vim.g.im_select_default = cfg.im_select_default
 
     local group_id = vim.api.nvim_create_augroup("im_select", { clear = true })
 

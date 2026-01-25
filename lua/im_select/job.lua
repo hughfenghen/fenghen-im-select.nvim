@@ -1,3 +1,5 @@
+local state = require("im_select.state")
+
 local M = {}
 
 local function rstrip(str, chars)
@@ -107,7 +109,7 @@ function ImGetJob:run()
                 local result = self.callback(code, rstrip(stdout_str, " \r\n"), rstrip(stderr_str, " \r\n"))
 
                 if self.set_prev_im then
-                    vim.g.im_select_prev_im = result
+                    state.set_prev_im(result)
                 end
             end
 
