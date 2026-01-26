@@ -95,6 +95,13 @@ M.on_insert_enter = function()
 	end
 
 	local cfg = im.get_config() or config.get_config()
+
+	local mode = vim.fn.mode()
+	if mode:match("^c") then
+		im.set_im(cfg.im_select_default)
+		return
+	end
+
 	local strategies = cfg.insert_enter_strategies or { M.strategy_default }
 
 	local result_im = execute_strategies(strategies, cfg)
