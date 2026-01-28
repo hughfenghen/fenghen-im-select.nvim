@@ -1,9 +1,9 @@
 # fenghen-im-select.nvim
 
-> 源码翻译自 [vim-im-select](https://github.com/brglng/vim-im-select)  
-> 只添加一个功能：切换插入模式时，检测光标左侧字符是否是中文：
-> - 如果是，自动切换到中文输入法（vim.g.im_select_native_im）
-> - 否则切换到默认输入法（vim.g.im_select_default_im）
+> 大部分源码翻译自 [vim-im-select](https://github.com/brglng/vim-im-select)  
+> 切换到 insert 模式时，支持自定义输入法切换策略
+> 策略提供的上下文有：光标前后字符、是否注释行、文件类型等，参考 opts.insert_enter_strategies 配置
+
 
 **动机**：
 - 想扩展 im-select 实现智能判断，成功了，但缺少了很多事件自动切换；
@@ -67,17 +67,32 @@ return {
       end,
       -- 如果光标前是英文字母，切换英文输入法
       function(ctx)
-        local nr = ctx.charcode_before or ctx.charcode_after or 0
-        if nr >= 0x41 and nr <= 0x5A or nr >= 0x61 and nr <= 0x7A then return im_select_default end
+        local ch = ctx.char_before or ctx.char_after or ""
+        if ch:match "[a-zA-Z]" then return im_select_default end
       end,
-
-      -- 如果光标前是空格，切换到上次使用的输入法
+      -- 如果源代码（tsx，jsx，lua，html，css），注释行切换中文，否则切换英文
       function(ctx)
-        local nr = ctx.charcode_before or 0
-        if nr == 0x0020 or nr == 0x3000 then return im_select.get_prev_im() end
+        local valid_types = {
+          typescript = true,
+          typescriptreact = true,
+          javascript = true,
+          javascriptreact = true,
+          lua = true,
+          html = true,
+          css = true,
+          python = true,
+        }
+        local is_match = valid_types[ctx.filetype]
+        if is_match then
+          if ctx.is_inside_comment then
+            return im_select_native_im
+          else
+            return im_select_default
+          end
+        end
       end,
 
-      -- Markdown 兜底切换至中文
+      -- Markdown 默认切换至中文
       function(ctx)
         if ctx.filetype == "markdown" then return im_select_native_im end
       end,
