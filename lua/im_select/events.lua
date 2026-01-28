@@ -11,12 +11,53 @@ local M = {}
 ---@field charcode_after number|nil
 ---@field filetype string
 ---@field line_content string
+---@field is_inside_comment boolean
 ---@field config im_select.Config
 ---@alias im_select.Strategy fun(ctx: im_select.StrategyContext): string|nil
 
 local function is_insert_or_cmdline_mode()
 	local mode = vim.fn.mode()
 	return mode:match("^[ciRsSt]$")
+end
+
+local function has_comment_ancestor(node)
+	local max_depth = 10
+	while node and max_depth > 0 do
+		if node:type():match("comment") then
+			return true
+		end
+		node = node:parent()
+		max_depth = max_depth - 1
+	end
+	return false
+end
+
+local function is_inner_comment(row, col)
+	local bufnr = 0
+
+	local function get_node_at(r, c)
+		return vim.treesitter.get_node({
+			bufnr = bufnr,
+			pos = { r, c },
+			include_anonymous = true,
+		})
+	end
+
+	-- 1️⃣ 先检测当前位置
+	local node = get_node_at(row, col)
+	if node and has_comment_ancestor(node) then
+		return true
+	end
+
+	-- 2️⃣ 如果在行尾，回退一列再检测（关键修复）
+	if col > 0 then
+		local prev_node = get_node_at(row, col - 1)
+		if prev_node and has_comment_ancestor(prev_node) then
+			return true
+		end
+	end
+
+	return false
 end
 
 local function get_context_before_cursor()
@@ -52,6 +93,8 @@ local function get_context_before_cursor()
 		line_content = line_content:sub(1, 1000)
 	end
 
+	local is_comment = is_inner_comment(row, col)
+
 	return {
 		char_before = char_before,
 		charcode_before = charcode_before,
@@ -59,6 +102,7 @@ local function get_context_before_cursor()
 		charcode_after = charcode_after,
 		filetype = vim.bo.filetype,
 		line_content = line_content,
+		is_inside_comment = is_comment,
 	}
 end
 
@@ -172,9 +216,12 @@ M.on_vim_leave_pre = function()
 	end
 
 	if state.get_prev_im() and state.get_prev_im() ~= "" then
-		local set_cmd = cfg.ImSelectSetImCmd(state.get_prev_im())
-		local cmd = table.concat(set_cmd, " ")
-		vim.fn.system("silent !" .. cmd)
+		local prev_im = state.get_prev_im()
+		if prev_im then
+			local set_cmd = cfg.ImSelectSetImCmd(prev_im)
+			local cmd = table.concat(set_cmd, " ")
+			vim.fn.system("silent !" .. cmd)
+		end
 	end
 end
 
