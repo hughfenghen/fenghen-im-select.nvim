@@ -158,7 +158,9 @@ end
 M.on_insert_leave_get_im_callback = function(code, stdout, stderr)
 	local cfg = im.get_config() or config.get_config()
 	local cur_im = cfg.ImSelectGetImCallback and cfg.ImSelectGetImCallback(code, stdout, stderr) or stdout
-	im.set_im(cfg.im_select_default)
+	if not is_insert_or_cmdline_mode() then
+		im.set_im(cfg.im_select_default)
+	end
 	return cur_im
 end
 
