@@ -34,6 +34,7 @@ M.set_im_get_im_callback = function(im, code, stdout, stderr)
 
         local set_cmd = cfg.ImSelectSetImCmd(im)
         job.ImSetJob.new(set_cmd)
+        state.set_prev_im(im)
     end
 
     return cur_im
