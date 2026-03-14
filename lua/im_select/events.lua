@@ -60,6 +60,34 @@ local function is_inner_comment(row, col)
 	return false
 end
 
+local function get_context_filetype(row, col)
+	local filetype = vim.bo.filetype
+	if filetype ~= "markdown" then
+		return filetype
+	end
+
+	local ok_parser, parser = pcall(vim.treesitter.get_parser, 0)
+	if not ok_parser or not parser then
+		return filetype
+	end
+
+	local ok_tree, lang_tree = pcall(parser.language_for_range, parser, { row, col, row, col })
+	if not ok_tree or not lang_tree then
+		return filetype
+	end
+
+	local ok_lang, lang = pcall(lang_tree.lang, lang_tree)
+	if not ok_lang or not lang or lang == "" then
+		return filetype
+	end
+
+	if lang == "markdown" or lang == "markdown_inline" then
+		return filetype
+	end
+
+	return lang
+end
+
 local function get_context_before_cursor()
 	local row = vim.fn.line(".") - 1
 	local col = vim.fn.col(".") - 1
@@ -100,7 +128,7 @@ local function get_context_before_cursor()
 		charcode_before = charcode_before,
 		char_after = char_after,
 		charcode_after = charcode_after,
-		filetype = vim.bo.filetype,
+		filetype = get_context_filetype(row, col),
 		line_content = line_content,
 		is_inside_comment = is_comment,
 	}
