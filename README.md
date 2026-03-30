@@ -4,8 +4,8 @@
 > 切换到 insert 模式时，支持自定义输入法切换策略
 > 策略提供的上下文有：光标前后字符、是否注释行、文件类型等，参考 opts.insert_enter_strategies 配置
 
-
 **动机**：
+
 - 想扩展 im-select 实现智能判断，成功了，但缺少了很多事件自动切换；
 - 想扩展 vim-im-select 实现智能判断，但 vimscript 语法 AI 总是实现错误
 - 所以使用lua语言翻译 vim-im-select，再扩展实现智能判断
@@ -33,6 +33,7 @@ return {
     ---@type im_select.Config
     local opts = {}
 
+    -- 配置系统的中文输入法，可参考下文在 mac 中配置"微信输入法"
     local im_select_native_im = nil
     local im_select_default = nil
 
@@ -209,23 +210,24 @@ vim.g.im_select_enable_cmd_line = 1
 
 ### 事件触发时机
 
-| 事件 | 触发条件 | 行为 |
-|------|---------|------|
-| InsertEnter | 进入插入模式 | 根据光标左侧字符判断 |
-| CmdLineEnter | 进入命令行模式 | 恢复之前的输入法 |
-| TermEnter | 进入终端模式 | 恢复之前的输入法 |
-| InsertLeave | 离开插入模式 | 保存当前输入法，切换到默认 |
-| CmdLineLeave | 离开命令行模式 | 保存当前输入法，切换到默认 |
-| TermLeave | 离开终端模式 | 保存当前输入法，切换到默认 |
-| FocusGained | 获得焦点（仅普通模式） | 切换到默认输入法 |
-| FocusLost | 失去焦点（仅普通模式） | 恢复之前的输入法 |
-| VimLeavePre | 退出 Vim | GUI恢复之前/终端切换默认 |
+| 事件         | 触发条件               | 行为                       |
+| ------------ | ---------------------- | -------------------------- |
+| InsertEnter  | 进入插入模式           | 根据光标左侧字符判断       |
+| CmdLineEnter | 进入命令行模式         | 恢复之前的输入法           |
+| TermEnter    | 进入终端模式           | 恢复之前的输入法           |
+| InsertLeave  | 离开插入模式           | 保存当前输入法，切换到默认 |
+| CmdLineLeave | 离开命令行模式         | 保存当前输入法，切换到默认 |
+| TermLeave    | 离开终端模式           | 保存当前输入法，切换到默认 |
+| FocusGained  | 获得焦点（仅普通模式） | 切换到默认输入法           |
+| FocusLost    | 失去焦点（仅普通模式） | 恢复之前的输入法           |
+| VimLeavePre  | 退出 Vim               | GUI恢复之前/终端切换默认   |
 
 ### 焦点事件防抖机制
 
 某些输入法切换命令（如 gdbus）会窃取焦点，导致 FocusLost 和 FocusGained 事件循环触发。
 
 插件实现了防抖机制：
+
 1. 执行切换命令前临时禁用焦点事件
 2. 设置定时器（默认 50ms）后恢复
 3. 在此期间不响应焦点事件
@@ -248,16 +250,16 @@ end
 
 ## 与 im-select.nvim 的区别
 
-| 特性 | fenghen-im-select.nvim | im-select.nvim |
-|------|----------------------|---------------|
-| CmdLineEnter/Leave 事件 | ✅ 支持 | ❌ 不支持 |
-| TermEnter/Leave 事件 | ✅ 支持 | ❌ 不支持 |
-| FocusGained/Lost 事件 | ✅ 支持 | ❌ 不支持 |
-| VimLeavePre 事件 | ✅ 支持 | ❌ 不支持 |
-| 焦点防抖机制 | ✅ 支持 | ❌ 不支持 |
-| 模式感知 | ✅ 支持 | ❌ 不支持 |
-| GNOME Shell 支持 | ✅ 支持 | ❌ 不支持 |
-| 异步任务 | ✅ vim.loop.spawn | ✅ vim.loop.spawn |
+| 特性                    | fenghen-im-select.nvim | im-select.nvim    |
+| ----------------------- | ---------------------- | ----------------- |
+| CmdLineEnter/Leave 事件 | ✅ 支持                | ❌ 不支持         |
+| TermEnter/Leave 事件    | ✅ 支持                | ❌ 不支持         |
+| FocusGained/Lost 事件   | ✅ 支持                | ❌ 不支持         |
+| VimLeavePre 事件        | ✅ 支持                | ❌ 不支持         |
+| 焦点防抖机制            | ✅ 支持                | ❌ 不支持         |
+| 模式感知                | ✅ 支持                | ❌ 不支持         |
+| GNOME Shell 支持        | ✅ 支持                | ❌ 不支持         |
+| 异步任务                | ✅ vim.loop.spawn      | ✅ vim.loop.spawn |
 
 ## 参考
 
