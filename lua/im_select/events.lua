@@ -40,6 +40,7 @@ local function is_inner_comment(row, col)
 			bufnr = bufnr,
 			pos = { r, c },
 			include_anonymous = true,
+			ignore_injections = false,
 		})
 	end
 
@@ -71,17 +72,26 @@ local function get_context_filetype(row, col)
 		return filetype
 	end
 
-	local ok_tree, lang_tree = pcall(parser.language_for_range, parser, { row, col, row, col })
-	if not ok_tree or not lang_tree then
-		return filetype
+	local function get_lang_at(r, c)
+		local ok_tree, lang_tree = pcall(parser.language_for_range, parser, { r, c, r, c })
+		if not ok_tree or not lang_tree then
+			return nil
+		end
+
+		local ok_lang, lang = pcall(lang_tree.lang, lang_tree)
+		if not ok_lang or not lang or lang == "" then
+			return nil
+		end
+
+		return lang
 	end
 
-	local ok_lang, lang = pcall(lang_tree.lang, lang_tree)
-	if not ok_lang or not lang or lang == "" then
-		return filetype
+	local lang = get_lang_at(row, col)
+	if (not lang or lang == "markdown" or lang == "markdown_inline") and col > 0 then
+		lang = get_lang_at(row, col - 1)
 	end
 
-	if lang == "markdown" or lang == "markdown_inline" then
+	if not lang or lang == "markdown" or lang == "markdown_inline" then
 		return filetype
 	end
 
